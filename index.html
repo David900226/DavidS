@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Juego de Naves Épicas</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            background: #000033; /* Fondo espacial */
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #000022;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Objeto Nave del jugador
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 80,
+            width: 60,
+            height: 100,
+            speed: 5,
+            dx: 0
+        };
+
+        // Arrays para disparos y enemigos
+        let bullets = [];
+        let enemies = [];
+
+        // Controles
+        let rightPressed = false;
+        let leftPressed = false;
+        let spacePressed = false;
+
+        // Event listeners para controles
+        document.addEventListener('keydown', keyDownHandler);
+        document.addEventListener('keyup', keyUpHandler);
+
+        function keyDownHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = true;
+            if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = true;
+            if (e.key === ' ') spacePressed = true;
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = false;
+            if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = false;
+            if (e.key === ' ') spacePressed = false;
+        }
+
+        // Dibujar la nave épica
+        function drawPlayer() {
+            // Cuerpo principal (base metálica gris oscura con brillo)
+            ctx.fillStyle = '#2F4F4F'; // Gris oscuro metálico
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y); // Punta superior
+            ctx.lineTo(player.x - player.width / 2, player.y + player.height); // Ala izquierda
+            ctx.lineTo(player.x + player.width / 2, player.y + player.height); // Ala derecha
+            ctx.closePath();
+            ctx.fill();
+
+            // Detalle central (cuerpo rojo brillante)
+            ctx.fillStyle = '#FF0000'; // Rojo intenso
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y + 10);
+            ctx.lineTo(player.x - 20, player.y + player.height - 20);
+            ctx.lineTo(player.x + 20, player.y + player.height - 20);
+            ctx.closePath();
+            ctx.fill();
+
+            // Alas laterales (azul metálico)
+            ctx.fillStyle = '#00CED1'; // Turquesa brillante
+            ctx.fillRect(player.x - player.width / 2 - 10, player.y + 40, 10, 40); // Ala izquierda
+            ctx.fillRect(player.x + player.width / 2, player.y + 40, 10, 40); // Ala derecha
+
+            // Reactores traseros (naranja brillante)
+            ctx.fillStyle = '#FFA500';
+            ctx.beginPath();
+            ctx.arc(player.x - 15, player.y + player.height, 10, 0, Math.PI * 2); // Reactor izquierdo
+            ctx.arc(player.x + 15, player.y + player.height, 10, 0, Math.PI * 2); // Reactor derecho
+            ctx.fill();
+
+            // Cabina (vidrio cyan)
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y + 30, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Detalles de líneas (blanco)
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(player.x - 20, player.y + 20);
+            ctx.lineTo(player.x - 30, player.y + 60);
+            ctx.moveTo(player.x + 20, player.y + 20);
+            ctx.lineTo(player.x + 30, player.y + 60);
+            ctx.stroke();
+        }
+
+        // Dibujar disparos
+        function drawBullets() {
+            bullets.forEach((bullet, bulletIndex) => {
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(bullet.x, bullet.y, 4, 10);
+                bullet.y -= 7; // Velocidad de los disparos
+                if (bullet.y < 0) bullets.splice(bulletIndex, 1);
+            });
+        }
+
+        // Crear disparo
+        function shoot() {
+            if (spacePressed) {
+                bullets.push({
+                    x: player.x,
+                    y: player.y - 10
+                });
+            }
+        }
+
+        // Movimiento de la nave
+        function movePlayer() {
+            player.dx = 0;
+            if (rightPressed && player.x + player.width / 2 + 10 < canvas.width) player.dx = player.speed;
+            if (leftPressed && player.x - player.width / 2 - 10 > 0) player.dx = -player.speed;
+            player.x += player.dx;
+        }
+
+        // Crear enemigo
+        function createEnemy() {
+            if (Math.random() < 0.02) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - 40),
+                    y: -40,
+                    width: 40,
+                    height: 30,
+                    speed: 2
+                });
+            }
+        }
+
+        // Dibujar y mover enemigos
+        function drawEnemies() {
+            enemies.forEach((enemy, enemyIndex) => {
+                // Diseño básico de enemigo (triángulo verde)
+                ctx.fillStyle = 'limegreen';
+                ctx.beginPath();
+                ctx.moveTo(enemy.x + enemy.width / 2, enemy.y);
+                ctx.lineTo(enemy.x, enemy.y + enemy.height);
+                ctx.lineTo(enemy.x + enemy.width, enemy.y + enemy.height);
+                ctx.closePath();
+                ctx.fill();
+
+                enemy.y += enemy.speed;
+
+                if (enemy.y > canvas.height) {
+                    enemies.splice(enemyIndex, 1);
+                }
+
+                // Colisión con disparos
+                bullets.forEach((bullet, bulletIndex) => {
+                    if (bullet.x > enemy.x && 
+                        bullet.x < enemy.x + enemy.width &&
+                        bullet.y > enemy.y &&
+                        bullet.y < enemy.y + enemy.height) {
+                        enemies.splice(enemyIndex, 1);
+                        bullets.splice(bulletIndex, 1);
+                    }
+                });
+
+                // Colisión con la nave
+                if (player.x - player.width / 2 < enemy.x + enemy.width &&
+                    player.x + player.width / 2 > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y) {
+                    alert('¡Colisión! Juego terminado.');
+                    enemies = [];
+                    bullets = [];
+                    player.x = canvas.width / 2;
+                }
+            });
+        }
+
+        // Función principal del juego
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            movePlayer();
+            drawPlayer();
+            drawBullets();
+            shoot();
+            createEnemy();
+            drawEnemies();
+
+            requestAnimationFrame(update);
+        }
+
+        // Iniciar el juego
+        update();
+    </script>
+</body>
+</html>
